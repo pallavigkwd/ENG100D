@@ -188,3 +188,46 @@ def average_total_energy_per_day(viasatCharging_df):
     average_energy_per_day = daily_data['total_energy'].mean()
     
     return average_energy_per_day
+
+def average_energy_per_charge_per_day(viasatCharging_df):
+    # Create daily data table
+    daily_data = daily_data_table(viasatCharging_df)
+
+    # Calculate the number of charges per day
+    daily_data['charge_count'] = viasatCharging_df.groupby('Start Date').size().reset_index(name='count')['count']
+    
+    # Calculate the average energy per charge per day
+    daily_data['avg_energy_per_charge'] = daily_data['total_energy'] / daily_data['charge_count']
+    
+    # Calculate the overall average of avg_energy_per_charge
+    overall_avg_energy_per_charge_per_day = daily_data['avg_energy_per_charge'].mean()
+    
+    return overall_avg_energy_per_charge_per_day
+
+def average_energy_per_charge_per_day(viasatCharging_df, energy_threshold=0.1, duration_threshold=0.0833):
+    # Ensure 'Charging Time (hh:mm:ss)' is converted to hours
+    viasatCharging_df.loc[:, 'Charging Time (hours)'] = viasatCharging_df['Charging Time (hh:mm:ss)'].apply(convert_to_hours)
+    
+    # Filter out negligible charges
+    filtered_df = viasatCharging_df[
+        (viasatCharging_df['Energy (kWh)'] >= energy_threshold) & 
+        (viasatCharging_df['Charging Time (hours)'] >= duration_threshold)
+    ].copy()  # Use .copy() to avoid the SettingWithCopyWarning
+    
+    # Convert 'Charging Time (hh:mm:ss)' to timedelta
+    filtered_df.loc[:, 'Charging Time'] = pd.to_timedelta(filtered_df['Charging Time (hh:mm:ss)'])
+    filtered_df.loc[:, 'Energy (kWh)'] = pd.to_numeric(filtered_df['Energy (kWh)'])
+
+    # Create daily data table
+    daily_data = daily_data_table(filtered_df)
+
+    # Calculate the number of charges per day
+    daily_data['charge_count'] = filtered_df.groupby('Start Date').size().reset_index(name='count')['count']
+    
+    # Calculate the average energy per charge per day
+    daily_data['avg_energy_per_charge'] = daily_data['total_energy'] / daily_data['charge_count']
+    
+    # Calculate the overall average of avg_energy_per_charge
+    overall_avg_energy_per_charge_per_day = daily_data['avg_energy_per_charge'].mean()
+    
+    return overall_avg_energy_per_charge_per_day
